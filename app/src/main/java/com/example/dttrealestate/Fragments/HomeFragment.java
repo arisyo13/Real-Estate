@@ -14,18 +14,22 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.SearchView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.dttrealestate.Model.Property;
 import com.example.dttrealestate.R;
-import com.example.dttrealestate.Utils.PropertyViewModel;
-import com.example.dttrealestate.Utils.RecyclerViewAdapter;
+import com.example.dttrealestate.Utils.Permissions;
+import com.example.dttrealestate.ViewModel.LocationViewModel;
+import com.example.dttrealestate.ViewModel.PropertyViewModel;
+import com.example.dttrealestate.Adapter.RecyclerViewAdapter;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
@@ -33,7 +37,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 
-import java.util.Collections;
 import java.util.List;
 
 
@@ -41,19 +44,23 @@ public class HomeFragment extends Fragment {
 
     //Widgets
     private RecyclerView recyclerView;
-    private SearchView searchView;
-    private ImageView searchStateEmptyImage;
-    private TextView noResultsTextView, anotherSeachTextView;
+    private RecyclerViewAdapter adapter;
+    private EditText search;
+    private ImageView noResultsImage, searchIcon;
+    private TextView noResultsText1, noResultsText2;
 
     //ViewModel
-    PropertyViewModel propertyViewModel;
+    private PropertyViewModel propertyViewModel;
+    private LocationViewModel locationViewModel;
 
-    FusedLocationProviderClient fusedLocationProviderClient;
-    private LatLng myLocation = new LatLng(0, 0); //Assign empty values for userLocation before he grants location permissionn
+    private FusedLocationProviderClient fusedLocationProviderClient;
+
+    //Assign empty values for userLocation before he grants location permission
+    private LatLng myLocation = new LatLng(0, 0);
 
     //variables
     private double latitude, longitude;
-
+    private boolean emptyList = true;
 
     public HomeFragment() {
         // Required empty public constructor
@@ -64,85 +71,101 @@ public class HomeFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        adapter = new RecyclerViewAdapter();
 
 
-        //sets the ViewModel into homeFragment
+        /**
+         * PropertyViewModel and LocationViewModel classes can now be accessed
+         * from HomeFragment class and communicate between.
+         * So now we tell the PropertyViewModel to start loading data from
+         * Api Service and store them into MutableLiveData
+         */
         propertyViewModel = new ViewModelProvider(this).get(PropertyViewModel.class);
-        propertyViewModel.getProperties();  //Retrieves all properties from ViewModel
+        propertyViewModel.loadProperties();
+
+        locationViewModel = new ViewModelProvider(this).get(LocationViewModel.class);
 
 
     }
+
+
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        searchView = view.findViewById(R.id.searchView);
+        search = view.findViewById(R.id.searchText);
         recyclerView = view.findViewById(R.id.recyclerViewLayout);
-        searchStateEmptyImage = view.findViewById(R.id.searchStateEmptyImage);
-        noResultsTextView = view.findViewById(R.id.noResultsTextView);
-        anotherSeachTextView = view.findViewById(R.id.anotherSearchTextView);
+        noResultsImage = view.findViewById(R.id.noResultsImage);
+        noResultsText1 = view.findViewById(R.id.noResultsText1);
+        noResultsText2 = view.findViewById(R.id.noResultsText2);
+        searchIcon = view.findViewById(R.id.searchIcon);
 
-        final RecyclerViewAdapter adapter = new RecyclerViewAdapter();
+
+        adapter = new RecyclerViewAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
 
+        getPermissions();
 
-        //Loading data from viewmodel to a list of properties
-        propertyViewModel.propertiesMutableLiveData.observe(getViewLifecycleOwner(), new Observer<List<Property>>() {
+
+        searchIcon.setTag(R.drawable.ic_search);
+        searchIcon.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onChanged(List<Property> properties) {
+            public void onClick(View v) {
 
-                adapter.setProperties(properties, myLocation); //Passes loaded list from view model and user location to recyclerview adapter
-                recyclerView.setAdapter(adapter);  //Passes the recyclerview adapter to recyclerview widget
-                Collections.sort(properties, Property.propertyPrice);  //sorts the list of properties by their price from smaller to bigger
-
+                if(searchIcon.getTag().equals(R.drawable.ic_close)){
+                    search.setText("");
+                }
             }
-
         });
 
 
-        //Removes the search button from keyboard
-        searchView.setImeOptions(EditorInfo.IME_ACTION_DONE);
-
-        //When user types into searchview
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+        search.addTextChangedListener(new TextWatcher() {
             @Override
-            public boolean onQueryTextSubmit(String s) {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-                //When submitting the search it checks if has no results and brings a no results message
-                if(adapter.getItemCount()== 0){
-                    searchStateEmptyImage.setVisibility(View.VISIBLE);
-                    noResultsTextView.setVisibility(View.VISIBLE);
-                    anotherSeachTextView.setVisibility(View.VISIBLE);
-                }
-
-                return false;
             }
 
             @Override
-            public boolean onQueryTextChange(String s) {
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
 
-                //When typing into search bar the recyclerview adapter gets called with the typed text without pressing enter and filters the list
-                adapter.getFilter().filter(s);
-
-
-                //When typing the search it checks if has results and hides the message
-                if(adapter.getItemCount()== 0) {
-                    searchStateEmptyImage.setVisibility(View.INVISIBLE);
-                    noResultsTextView.setVisibility(View.INVISIBLE);
-                    anotherSeachTextView.setVisibility(View.INVISIBLE);
-                }
-
-                return false;
             }
 
+            @Override
+            public void afterTextChanged(Editable s) {
 
+                if(!emptyList){
+                    propertyViewModel.getFilter().filter(s);
+                }
+
+                if(search.getText().length()==0){
+                    searchIcon.setImageResource(R.drawable.ic_search);
+                    searchIcon.setTag(R.drawable.ic_search);
+
+                }else{
+                    searchIcon.setImageResource(R.drawable.ic_close);
+                    searchIcon.setTag(R.drawable.ic_close);
+                }
+
+            }
         });
 
-        getLocation();
+
+        /**
+         * With this method when location is added in LocationViewModel
+         * then it calls for getProperties methods to retrieve them into recyclerView
+         */
+
+        locationViewModel.userLocation.observe(getViewLifecycleOwner(), new Observer<LatLng>() {
+            @Override
+            public void onChanged(LatLng latLng) {
+
+                getProperties();
+            }
+        });
 
 
 
@@ -167,10 +190,74 @@ public class HomeFragment extends Fragment {
 
                     myLocation = new LatLng(latitude, longitude);
 
+                    locationViewModel.setLocation(myLocation);
+
                 }
 
             }
         });
+
+
+
+    }
+
+    /**
+     * This method observes the properties list from PropertyViewModel and puts them into recyclerView.
+     * Every time a search is performed then new list get observed and re attached into recycler view.
+     * If the list is empty then brings No results message to the screen.
+     * Also
+     */
+
+    private void getProperties(){
+
+        propertyViewModel.propertiesMutableLiveData.observe(getViewLifecycleOwner(), new Observer<List<Property>>() {
+            @Override
+            public void onChanged(List<Property> properties) {
+                if(!properties.isEmpty()){
+                    emptyList = false;
+
+                }
+                if(propertyViewModel.propertiesMutableLiveData.getValue().isEmpty()){
+                    noResultsImage.setVisibility(View.VISIBLE);
+                    noResultsText1.setVisibility(View.VISIBLE);
+                    noResultsText2.setVisibility(View.VISIBLE);
+
+                }else{
+                    noResultsImage.setVisibility(View.INVISIBLE);
+                    noResultsText1.setVisibility(View.INVISIBLE);
+                    noResultsText2.setVisibility(View.INVISIBLE);
+                }
+
+                adapter.setProperties(properties, myLocation);
+                recyclerView.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
+
+
+            }
+
+        });
+    }
+
+    /**
+     * This method calls
+     */
+
+    private void getPermissions(){
+        boolean isPermitted = false;
+
+        Permissions permissions = new Permissions();
+        if(permissions.checkPermissionsArray(getActivity(),Permissions.PERMISSIONS)){
+            getLocation();
+
+        }
+        else{
+            permissions.verifyPermissions(getActivity(), Permissions.PERMISSIONS);
+
+            getProperties();
+
+        }
+
+
     }
 
 

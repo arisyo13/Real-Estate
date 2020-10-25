@@ -14,7 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.dttrealestate.R;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -27,6 +26,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.squareup.picasso.Picasso;
 
+import java.text.DecimalFormat;
+
 
 public class DetailsFragment extends Fragment implements OnMapReadyCallback {
 
@@ -34,7 +35,7 @@ public class DetailsFragment extends Fragment implements OnMapReadyCallback {
     private TextView description, bedrooms, bathrooms, size, price, distance;
     private ImageView houseImage, backImage;
     private MapView mapView;
-
+    private DecimalFormat priceFormat = new DecimalFormat("$###,###,###,###");
 
 
     public DetailsFragment() {
@@ -57,14 +58,17 @@ public class DetailsFragment extends Fragment implements OnMapReadyCallback {
         backImage = view.findViewById(R.id.backImageView);
 
 
-        //Sets the textview of clicked element from recyclerviewadapter using bundle keys
-        price.setText(getArguments().getString("price"));
+        //Sets the textView of clicked element from recyclerViewAdapter using bundle keys
+        price.setText(priceFormat.format(getArguments().getInt("price")));
         description.setText(getArguments().getString("description"));
         bedrooms.setText(getArguments().getString("bedrooms"));
         bathrooms.setText(getArguments().getString("bathrooms"));
         size.setText(getArguments().getString("size"));
         distance.setText(getArguments().getString("distance"));
         Picasso.get().load(getArguments().getString("image")).into(houseImage);
+
+
+
 
 
 
@@ -76,14 +80,11 @@ public class DetailsFragment extends Fragment implements OnMapReadyCallback {
         }
 
 
-
-
         backImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment);
-                navController.navigate(R.id.action_detailsFragment_to_homeFragment);
+                getActivity().onBackPressed();
 
             }
         });

@@ -1,11 +1,9 @@
-package com.example.dttrealestate.Utils;
+package com.example.dttrealestate.Adapter;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Filter;
-import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -16,28 +14,27 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.RecyclerView;
 
+
 import com.example.dttrealestate.Model.Property;
 import com.example.dttrealestate.R;
+import com.example.dttrealestate.Utils.Constants;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.SphericalUtil;
 import com.squareup.picasso.Picasso;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 
-public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder> implements Filterable{
+public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder>{
 
     ArrayList<Property> properties = new ArrayList<>();
-    ArrayList<Property> propertiesFiltered;
     LatLng myLocation;
 
     //Constructor of recyclerview adapter which we provide a full list with properties and the user location
     public void setProperties(List<Property> properties, LatLng myLocation){
         this.properties = (ArrayList<Property>) properties;
-        propertiesFiltered = new ArrayList<>(properties);
         this.myLocation = myLocation;
         notifyDataSetChanged();
     }
@@ -54,20 +51,21 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull final MyViewHolder holder, int position) {
-        final Property currentItem = properties.get(position);
+        final Property item = properties.get(position);
+        DecimalFormat price = new DecimalFormat("$###,###,###,###");
 
-        holder.cityView.setText(currentItem.getCity());
-        holder.priceView.setText(Integer.toString(currentItem.getPrice()));
-        holder.zipView.setText(currentItem.getZip());
-        holder.sizeView.setText(Integer.toString(currentItem.getSize()));
-        holder.bedroomsView.setText(Integer.toString(currentItem.getBathrooms()));
-        holder.bathroomsView.setText(Integer.toString(currentItem.getBedrooms()));
-        Picasso.get().load("https://intern.docker-dev.d-tt.nl"+ currentItem.getImage()).into(holder.imageView);
+        holder.cityView.setText(item.getCity());
+        holder.priceView.setText(price.format((item.getPrice())));
+        holder.zipView.setText(item.getZip());
+        holder.sizeView.setText(Integer.toString(item.getSize()));
+        holder.bedroomsView.setText(Integer.toString(item.getBathrooms()));
+        holder.bathroomsView.setText(Integer.toString(item.getBedrooms()));
+        Picasso.get().load(Constants.IMAGE_URL + item.getImage()).into(holder.imageView);
 
-        holder.propertyLocation = new LatLng(currentItem.getLatitude(),currentItem.getLongitude());
+        holder.propertyLocation = new LatLng(item.getLatitude(),item.getLongitude());
 
         if(myLocation.latitude == 0 && myLocation.longitude == 0){
-            holder.distanceView.setText("uknowkn");
+            holder.distanceView.setText("unknown");
         }
         else{
             holder.distance = SphericalUtil.computeDistanceBetween(myLocation, holder.propertyLocation);
@@ -84,48 +82,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         return properties.size();
     }
 
-    @Override
-    public Filter getFilter() {
-        return propertiesFilter;
-    }
 
-    private Filter propertiesFilter = new Filter() {
-        @Override
-        protected FilterResults performFiltering(CharSequence constraint) {
-            List<Property> filteredList = new ArrayList<>();
-            if (constraint == null || constraint.length() == 0){
-                filteredList.addAll(propertiesFiltered);
-            }
-            else{
-                String filterPattern = constraint.toString().toLowerCase().trim();
-
-                for (Property item: propertiesFiltered){
-                    //if zip address of each item in the list matches the typed text from user then it adds it to the filtered list
-                    if (item.getZip().toLowerCase().contains(filterPattern)){
-                        filteredList.add(item);
-
-                    }
-                }
-            }
-            FilterResults results = new FilterResults();
-            results.values = filteredList;
-            results.count = filteredList.size();
-
-            return results;
-        }
-
-        @Override
-        protected void publishResults(CharSequence constraint, FilterResults results) {
-            properties.clear();
-
-            FilterResults r = new FilterResults();
-            r = results;
-            properties.addAll((List)results.values);
-            Collections.sort(properties, Property.propertyPrice);
-            notifyDataSetChanged();
-
-        }
-    };
 
 
 
@@ -136,7 +93,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         private TextView zipView, cityView, priceView, sizeView, bedroomsView, bathroomsView, distanceView;
         private LatLng propertyLocation = new LatLng(0,0);
         double distance;
-        DecimalFormat df = new DecimalFormat(".0");
+        DecimalFormat df = new DecimalFormat(".0 km");
         String d;
 
         public MyViewHolder(@NonNull View itemView) {
@@ -150,9 +107,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             bedroomsView=itemView.findViewById(R.id.bedroomsView);
             bathroomsView=itemView.findViewById(R.id.bathroomsView);
             distanceView=itemView.findViewById(R.id.distanceView);
-            searchStateEmptyImage=itemView.findViewById(R.id.searchStateEmptyImage);
+            searchStateEmptyImage=itemView.findViewById(R.id.noResultsImage);
 
-            //Toast.makeText(mContext, Integer.toString(a), Toast.LENGTH_SHORT).show();
             itemView.setOnClickListener(this);
         }
 
@@ -161,7 +117,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             Property property = properties.get(getAdapterPosition());
             Bundle bundle = new Bundle();
             bundle.putString("city", property.getCity());
-            bundle.putString("price", Integer.toString(property.getPrice()));
+            bundle.putInt("price", property.getPrice());
             bundle.putString("description", property.getDescription());
             bundle.putString("image", "https://intern.docker-dev.d-tt.nl" + property.getImage());
             bundle.putString("bedrooms", Integer.toString(property.getBedrooms()));

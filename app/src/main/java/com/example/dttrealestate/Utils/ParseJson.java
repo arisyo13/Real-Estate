@@ -10,7 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ParseJson {
     private static final String BASE_URL = "https://intern.docker-dev.d-tt.nl/api/";
-    private PropertyInterface propertyInterface;
+    private PropertyApiService propertyApiService;
     private static ParseJson INSTANCE;
 
     public ParseJson() {
@@ -18,7 +18,7 @@ public class ParseJson {
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-        propertyInterface = retrofit.create(PropertyInterface.class);
+        propertyApiService = retrofit.create(PropertyApiService.class);
     }
 
     public static ParseJson getINSTANCE() {
@@ -29,6 +29,6 @@ public class ParseJson {
     }
 
     public Call<List<Property>> getProperties(){
-        return propertyInterface.getProperties();
+        return propertyApiService.getProperties();
     }
 }
