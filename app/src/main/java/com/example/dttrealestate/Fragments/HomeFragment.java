@@ -126,12 +126,9 @@ public class HomeFragment extends Fragment {
         search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
             }
-
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-
             }
 
             @Override
@@ -149,34 +146,37 @@ public class HomeFragment extends Fragment {
                     searchIcon.setImageResource(R.drawable.ic_close);
                     searchIcon.setTag(R.drawable.ic_close);
                 }
-
             }
         });
 
 
         /**
-         * With this method when location is added in LocationViewModel
-         * then it calls for getProperties methods to retrieve them into recyclerView
+         * When LocationViewModel got set with new data
+         * it automatically is calling the method getProperties
          */
-
         locationViewModel.userLocation.observe(getViewLifecycleOwner(), new Observer<LatLng>() {
             @Override
             public void onChanged(LatLng latLng) {
+                myLocation = latLng;
 
                 getProperties();
             }
         });
 
 
-
         return view;
     }
 
 
+    /**
+     * When user is granting location permission this method is called.
+     * It retrieves device gps latitude and longitude and store them into LocationViewModel class
+     */
     private void getLocation() {
 
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         fusedLocationProviderClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
@@ -196,18 +196,16 @@ public class HomeFragment extends Fragment {
 
             }
         });
-
-
-
     }
+
 
     /**
      * This method observes the properties list from PropertyViewModel and puts them into recyclerView.
      * Every time a search is performed then new list get observed and re attached into recycler view.
-     * If the list is empty then brings No results message to the screen.
-     * Also
+     * If the list is empty then brings No results message to the screen other it removes the message.
+     * Also when list is not empty it sets a boolean variable to false so it will prevent
+     * perform filtering to an empty MutableLiveData list
      */
-
     private void getProperties(){
 
         propertyViewModel.propertiesMutableLiveData.observe(getViewLifecycleOwner(), new Observer<List<Property>>() {
@@ -232,18 +230,20 @@ public class HomeFragment extends Fragment {
                 recyclerView.setAdapter(adapter);
                 adapter.notifyDataSetChanged();
 
-
             }
 
         });
     }
 
-    /**
-     * This method calls
-     */
 
+    /**
+     * This method calls Permissions class which is asking user for
+     * Location permission.
+     * If its granted then calls method get Location.
+     * If not it just calls getProperties method
+     */
     private void getPermissions(){
-        boolean isPermitted = false;
+
 
         Permissions permissions = new Permissions();
         if(permissions.checkPermissionsArray(getActivity(),Permissions.PERMISSIONS)){
@@ -252,7 +252,6 @@ public class HomeFragment extends Fragment {
         }
         else{
             permissions.verifyPermissions(getActivity(), Permissions.PERMISSIONS);
-
             getProperties();
 
         }
