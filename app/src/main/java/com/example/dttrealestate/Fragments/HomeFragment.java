@@ -108,6 +108,8 @@ public class HomeFragment extends Fragment {
         recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
 
+        getProperties();
+
         getPermissions();
 
 
@@ -252,7 +254,7 @@ public class HomeFragment extends Fragment {
         }
         else{
             permissions.verifyPermissions(getActivity(), Permissions.PERMISSIONS);
-            getProperties();
+
 
         }
 
